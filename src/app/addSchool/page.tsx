@@ -3,11 +3,37 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { schoolSchema, SchoolFormData } from '../lib/validation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function AddSchool() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const router = useRouter();
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        setIsAuthenticated(false);
+        router.push('/login');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const {
     register,
@@ -32,7 +58,8 @@ export default function AddSchool() {
       formData.append('email_id', data.email_id);
       formData.append('image', data.image[0]);
 
-      const response = await fetch('/schools', {
+      // Fixed the API endpoint URL
+      const response = await fetch('/api/schools', {
         method: 'POST',
         body: formData,
       });
@@ -41,7 +68,8 @@ export default function AddSchool() {
         setSubmitMessage('School added successfully!');
         reset();
       } else {
-        setSubmitMessage('Failed to add school. Please try again.');
+        const errorData = await response.json();
+        setSubmitMessage(errorData.error || 'Failed to add school. Please try again.');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -51,12 +79,29 @@ export default function AddSchool() {
     }
   };
 
+  // Show loading state while checking authentication
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render the form if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
             <h1 className="text-2xl font-bold text-gray-900">Add New School</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              You are logged in and can add new schools to the system.
+            </p>
           </div>
           
           <form onSubmit={handleSubmit(onSubmit)} className="px-4 py-5 sm:p-6">
