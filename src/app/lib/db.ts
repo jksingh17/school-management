@@ -22,8 +22,3 @@ export async function query(sql: string, params?: ParamValue[] | ParamValue[][])
     await connection.end();
   }
 }
-
-
-export async function queryWithValues<T extends ParamValue[]>(sql: string, params?: T) {
-  return query(sql, params);
-}
